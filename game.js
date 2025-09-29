@@ -19,14 +19,107 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Server Connection
 function connectToServer() {
-    // Start directly in offline mode for reliable GitHub Pages experience
-    console.log('Starting in offline mode');
-    updateConnectionStatus(false);
+    // Use our deployed server
+    const serverUrl = 'https://ludo-multiplayer-server.onrender.com'; // Will deploy here
 
-    // Show message after a short delay to simulate connection attempt
-    setTimeout(() => {
-        showToast('Running in offline mode - create local rooms to play!', 'info');
-    }, 1000);
+    console.log('Connecting to server...');
+
+    socket = io(serverUrl, {
+        transports: ['websocket', 'polling'],
+        timeout: 8000,
+        reconnection: true,
+        reconnectionAttempts: 3,
+        reconnectionDelay: 1000
+    });
+
+    // Fallback timer
+    const fallbackTimer = setTimeout(() => {
+        console.log('Connection timeout - using offline mode');
+        updateConnectionStatus(false);
+        showToast('Server timeout. Using offline mode.', 'info');
+        socket = null;
+    }, 8000);
+
+    socket.on('connect', () => {
+        clearTimeout(fallbackTimer);
+        console.log('✅ Connected to server!');
+        updateConnectionStatus(true);
+        showToast('🟢 Connected! Online multiplayer ready!', 'success');
+        setupSocketEvents();
+    });
+
+    socket.on('connect_error', (error) => {
+        clearTimeout(fallbackTimer);
+        console.error('Connection failed:', error);
+        updateConnectionStatus(false);
+        showToast('Connection failed. Using offline mode.', 'info');
+        socket = null;
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+        updateConnectionStatus(false);
+        showToast('Disconnected from server', 'info');
+    });
+}
+
+function setupSocketEvents() {
+    if (!socket) return;
+
+    socket.on('roomCreated', (data) => {
+        gameState.roomId = data.roomId;
+        gameState.playerId = data.playerId;
+        gameState.players = data.players;
+        showLobby();
+        updateLobby();
+        showToast(`Room ${data.roomId} created!`, 'success');
+    });
+
+    socket.on('roomJoined', (data) => {
+        gameState.roomId = data.roomId;
+        gameState.playerId = data.playerId;
+        gameState.players = data.players;
+        showLobby();
+        updateLobby();
+        showToast(`Joined room ${data.roomId}!`, 'success');
+    });
+
+    socket.on('playerJoined', (data) => {
+        gameState.players = data.players;
+        updateLobby();
+        showToast(`${data.playerName} joined!`, 'info');
+    });
+
+    socket.on('playerLeft', (data) => {
+        gameState.players = data.players;
+        updateLobby();
+        showToast(`${data.playerName} left`, 'info');
+    });
+
+    socket.on('gameStarted', (data) => {
+        gameState.gameStarted = true;
+        gameState.currentPlayer = data.currentPlayer;
+        showGame();
+        updateGameState();
+        showToast('🎮 Game Started!', 'success');
+    });
+
+    socket.on('diceRolled', (data) => {
+        gameState.diceValue = data.value;
+        gameState.currentPlayer = data.currentPlayer;
+        updateDice(data.value);
+        updateTurn();
+        showToast(`${data.playerName} rolled ${data.value}`, 'info');
+    });
+
+    socket.on('pieceMoved', (data) => {
+        updateBoard(data);
+        showToast(`${data.playerName} moved a piece`, 'info');
+    });
+
+    socket.on('error', (data) => {
+        showToast(data.message, 'error');
+    });
 }
 
 // Screen Management
