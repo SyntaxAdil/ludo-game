@@ -19,93 +19,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Server Connection
 function connectToServer() {
-    // For now, skip server connection and go directly to offline mode
-    console.log('Starting in offline mode for demo');
+    // Start directly in offline mode for reliable GitHub Pages experience
+    console.log('Starting in offline mode');
     updateConnectionStatus(false);
-    showToast('Running in offline mode - create local rooms only', 'info');
-    return;
 
-    socket = io(serverUrl, {
-        transports: ['websocket', 'polling'],
-        timeout: 10000,
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000
-    });
-
-    socket.on('connect', () => {
-        console.log('Connected to server');
-        updateConnectionStatus(true);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
-        updateConnectionStatus(false);
-    });
-
-    socket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
-        updateConnectionStatus(false);
-        showToast('Server connection failed. Using local mode.', 'error');
-    });
-
-    socket.on('roomCreated', (data) => {
-        gameState.roomId = data.roomId;
-        gameState.playerId = data.playerId;
-        gameState.players = data.players;
-        showLobby();
-        updateLobby();
-    });
-
-    socket.on('roomJoined', (data) => {
-        gameState.roomId = data.roomId;
-        gameState.playerId = data.playerId;
-        gameState.players = data.players;
-        showLobby();
-        updateLobby();
-    });
-
-    socket.on('playerJoined', (data) => {
-        gameState.players = data.players;
-        updateLobby();
-        showToast(`${data.playerName} joined the room!`);
-    });
-
-    socket.on('playerLeft', (data) => {
-        gameState.players = data.players;
-        updateLobby();
-        showToast(`${data.playerName} left the room`);
-    });
-
-    socket.on('gameStarted', (data) => {
-        gameState.gameStarted = true;
-        gameState.currentPlayer = data.currentPlayer;
-        showGame();
-        updateGameState();
-        showToast('Game Started!');
-    });
-
-    socket.on('diceRolled', (data) => {
-        gameState.diceValue = data.value;
-        gameState.currentPlayer = data.currentPlayer;
-        gameState.canRoll = data.playerId === gameState.playerId;
-        updateDice(data.value);
-        updateTurn();
-        showToast(`${data.playerName} rolled ${data.value}`);
-    });
-
-    socket.on('pieceMoved', (data) => {
-        updateBoard(data);
-        showToast(`${data.playerName} moved a piece`);
-    });
-
-    socket.on('gameWon', (data) => {
-        showToast(`🎉 ${data.winnerName} wins the game! 🎉`);
-    });
-
-    socket.on('error', (data) => {
-        showToast(data.message, 'error');
-    });
+    // Show message after a short delay to simulate connection attempt
+    setTimeout(() => {
+        showToast('Running in offline mode - create local rooms to play!', 'info');
+    }, 1000);
 }
 
 // Screen Management
@@ -173,13 +94,29 @@ function createRoom() {
 }
 
 function createLocalRoom(playerName) {
-    // Fallback to local room
+    // Create a local room that works offline
     gameState.roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     gameState.playerId = 'local-' + Date.now();
     gameState.players = [{ id: gameState.playerId, name: playerName }];
-    showLobby();
-    updateLobby();
-    showToast('Created local room (offline mode)', 'info');
+
+    // Add a bot player automatically for demo
+    setTimeout(() => {
+        addBotPlayer();
+        showLobby();
+        updateLobby();
+        showToast('Local room created! Added bot player for demo.', 'success');
+    }, 500);
+}
+
+function addBotPlayer() {
+    const botNames = ['Robot Player', 'AI Challenger', 'Bot Buddy', 'Computer'];
+    const botName = botNames[Math.floor(Math.random() * botNames.length)];
+
+    gameState.players.push({
+        id: 'bot-' + Date.now(),
+        name: botName,
+        isBot: true
+    });
 }
 
 function joinRoom() {
@@ -221,7 +158,17 @@ function leaveGame() {
 
 // Game Management
 function startGame() {
-    socket.emit('startGame', { roomId: gameState.roomId, playerId: gameState.playerId });
+    if (socket && socket.connected) {
+        socket.emit('startGame', { roomId: gameState.roomId, playerId: gameState.playerId });
+    } else {
+        // Local game start
+        gameState.gameStarted = true;
+        gameState.currentPlayer = 0;
+        gameState.canRoll = true;
+        showGame();
+        updateGameState();
+        showToast('Local game started! 🎮', 'success');
+    }
 }
 
 function rollDice() {
@@ -235,8 +182,52 @@ function rollDice() {
 
     setTimeout(() => {
         dice.classList.remove('rolling');
-        socket.emit('rollDice', { roomId: gameState.roomId, playerId: gameState.playerId });
+
+        if (socket && socket.connected) {
+            socket.emit('rollDice', { roomId: gameState.roomId, playerId: gameState.playerId });
+        } else {
+            // Local dice roll
+            const diceValue = Math.floor(Math.random() * 6) + 1;
+            updateDice(diceValue);
+
+            showToast(`You rolled ${diceValue}!`, 'info');
+
+            // Move to next player if not 6
+            if (diceValue !== 6) {
+                gameState.currentPlayer = (gameState.currentPlayer + 1) % gameState.players.length;
+                updateTurn();
+
+                // Bot turn simulation
+                if (gameState.players[gameState.currentPlayer].isBot) {
+                    setTimeout(() => {
+                        botTurn();
+                    }, 2000);
+                }
+            }
+        }
     }, 500);
+}
+
+function botTurn() {
+    const botDice = Math.floor(Math.random() * 6) + 1;
+    updateDice(botDice);
+
+    const botName = gameState.players[gameState.currentPlayer].name;
+    showToast(`${botName} rolled ${botDice}`, 'info');
+
+    setTimeout(() => {
+        if (botDice !== 6) {
+            gameState.currentPlayer = (gameState.currentPlayer + 1) % gameState.players.length;
+            updateTurn();
+
+            if (gameState.players[gameState.currentPlayer].isBot) {
+                setTimeout(() => botTurn(), 2000);
+            }
+        } else {
+            // Bot gets another turn
+            setTimeout(() => botTurn(), 1500);
+        }
+    }, 1000);
 }
 
 // UI Updates
