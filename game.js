@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Server Connection
 function connectToServer() {
     // Use our deployed server
-    const serverUrl = 'https://ludo-multiplayer-server.onrender.com'; // Will deploy here
+    const serverUrl = 'https://ludo-game-em4h.onrender.com'; // Will deploy here
 
     console.log('Connecting to server...');
 
