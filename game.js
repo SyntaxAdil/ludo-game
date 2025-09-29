@@ -19,14 +19,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Server Connection
 function connectToServer() {
-    // Try multiple server URLs
-    const serverUrls = [
-        'https://ludo-n12co9hlr-adils-projects-ab51230d.vercel.app',
-        'https://socket-io-server.glitch.me',  // Backup server
-        'https://localhost:3001'  // Local server if running
-    ];
-
-    const serverUrl = serverUrls[0]; // Start with main server
+    // For now, skip server connection and go directly to offline mode
+    console.log('Starting in offline mode for demo');
+    updateConnectionStatus(false);
+    showToast('Running in offline mode - create local rooms only', 'info');
+    return;
 
     socket = io(serverUrl, {
         transports: ['websocket', 'polling'],
@@ -246,10 +243,10 @@ function rollDice() {
 function updateConnectionStatus(connected) {
     const status = document.getElementById('connectionStatus');
     if (connected) {
-        status.textContent = '🟢 Connected to server';
+        status.textContent = '🟢 Connected to server - Online multiplayer available';
         status.className = 'connection-status connected';
     } else {
-        status.textContent = '🔴 Disconnected from server';
+        status.textContent = '🟠 Offline mode - Local games only';
         status.className = 'connection-status disconnected';
     }
 }
