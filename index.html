@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Ludo Game</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+</head>
+<body>
+    <!-- Home Screen -->
+    <div id="homeScreen" class="screen">
+        <div class="container">
+            <h1>🎲 ONLINE LUDO 🎲</h1>
+            <div class="menu-buttons">
+                <button class="btn btn-primary" onclick="showCreateRoom()">CREATE ROOM</button>
+                <button class="btn btn-secondary" onclick="showJoinRoom()">JOIN ROOM</button>
+            </div>
+            <div class="connection-status">
+                <span id="connectionStatus">Connecting to server...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Room Screen -->
+    <div id="createRoomScreen" class="screen hidden">
+        <div class="container">
+            <h2>Create Room</h2>
+            <input type="text" id="playerName1" placeholder="Your Name" maxlength="15">
+            <button class="btn btn-primary" onclick="createRoom()">CREATE ROOM</button>
+            <button class="btn btn-back" onclick="showHome()">← BACK</button>
+        </div>
+    </div>
+
+    <!-- Join Room Screen -->
+    <div id="joinRoomScreen" class="screen hidden">
+        <div class="container">
+            <h2>Join Room</h2>
+            <input type="text" id="playerName2" placeholder="Your Name" maxlength="15">
+            <input type="text" id="roomCode" placeholder="Room Code" maxlength="6">
+            <button class="btn btn-primary" onclick="joinRoom()">JOIN ROOM</button>
+            <button class="btn btn-back" onclick="showHome()">← BACK</button>
+        </div>
+    </div>
+
+    <!-- Lobby Screen -->
+    <div id="lobbyScreen" class="screen hidden">
+        <div class="container">
+            <h2>Room: <span id="roomId"></span></h2>
+            <div class="players-list">
+                <h3>Players:</h3>
+                <div id="playersList"></div>
+            </div>
+            <button id="startGameBtn" class="btn btn-primary hidden" onclick="startGame()">START GAME</button>
+            <div id="waitingMessage">Waiting for more players...</div>
+            <button class="btn btn-back" onclick="leaveRoom()">LEAVE ROOM</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen hidden">
+        <div class="game-header">
+            <div class="game-info">
+                <span>Room: <span id="gameRoomId"></span></span>
+                <span>Players: <span id="gamePlayersCount"></span></span>
+                <span>Turn: <span id="currentTurn">Player 1</span></span>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <!-- Game Board -->
+            <div class="game-board">
+                <!-- Red Home -->
+                <div class="corner red-home">
+                    <div class="home-area">
+                        <div class="piece red-piece" data-player="0" data-piece="0"></div>
+                        <div class="piece red-piece" data-player="0" data-piece="1"></div>
+                        <div class="piece red-piece" data-player="0" data-piece="2"></div>
+                        <div class="piece red-piece" data-player="0" data-piece="3"></div>
+                    </div>
+                </div>
+
+                <!-- Red Path Vertical -->
+                <div class="path vertical">
+                    <div class="cell" data-pos="1"></div>
+                    <div class="cell" data-pos="2"></div>
+                    <div class="cell" data-pos="3"></div>
+                    <div class="cell red-safe" data-pos="4"></div>
+                    <div class="cell" data-pos="5"></div>
+                    <div class="cell" data-pos="6"></div>
+                </div>
+
+                <!-- Yellow Home -->
+                <div class="corner yellow-home">
+                    <div class="home-area">
+                        <div class="piece yellow-piece" data-player="1" data-piece="0"></div>
+                        <div class="piece yellow-piece" data-player="1" data-piece="1"></div>
+                        <div class="piece yellow-piece" data-player="1" data-piece="2"></div>
+                        <div class="piece yellow-piece" data-player="1" data-piece="3"></div>
+                    </div>
+                </div>
+
+                <!-- Red Path Horizontal -->
+                <div class="path horizontal">
+                    <div class="cell" data-pos="7"></div>
+                    <div class="cell" data-pos="8"></div>
+                    <div class="cell" data-pos="9"></div>
+                    <div class="cell" data-pos="10"></div>
+                    <div class="cell" data-pos="11"></div>
+                    <div class="cell" data-pos="12"></div>
+                </div>
+
+                <!-- Center -->
+                <div class="center">
+                    <div class="triangle red"></div>
+                    <div class="triangle yellow"></div>
+                    <div class="triangle green"></div>
+                    <div class="triangle blue"></div>
+                </div>
+
+                <!-- Yellow Path Horizontal -->
+                <div class="path horizontal">
+                    <div class="cell" data-pos="13"></div>
+                    <div class="cell" data-pos="14"></div>
+                    <div class="cell" data-pos="15"></div>
+                    <div class="cell" data-pos="16"></div>
+                    <div class="cell" data-pos="17"></div>
+                    <div class="cell" data-pos="18"></div>
+                </div>
+
+                <!-- Blue Home -->
+                <div class="corner blue-home">
+                    <div class="home-area">
+                        <div class="piece blue-piece" data-player="2" data-piece="0"></div>
+                        <div class="piece blue-piece" data-player="2" data-piece="1"></div>
+                        <div class="piece blue-piece" data-player="2" data-piece="2"></div>
+                        <div class="piece blue-piece" data-player="2" data-piece="3"></div>
+                    </div>
+                </div>
+
+                <!-- Blue Path Vertical -->
+                <div class="path vertical">
+                    <div class="cell" data-pos="19"></div>
+                    <div class="cell" data-pos="20"></div>
+                    <div class="cell" data-pos="21"></div>
+                    <div class="cell blue-safe" data-pos="22"></div>
+                    <div class="cell" data-pos="23"></div>
+                    <div class="cell" data-pos="24"></div>
+                </div>
+
+                <!-- Green Home -->
+                <div class="corner green-home">
+                    <div class="home-area">
+                        <div class="piece green-piece" data-player="3" data-piece="0"></div>
+                        <div class="piece green-piece" data-player="3" data-piece="1"></div>
+                        <div class="piece green-piece" data-player="3" data-piece="2"></div>
+                        <div class="piece green-piece" data-player="3" data-piece="3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dice Area -->
+            <div class="dice-area">
+                <div class="dice" id="dice" onclick="rollDice()">
+                    <div class="dice-face">1</div>
+                </div>
+                <div class="dice-text">Tap to Roll</div>
+                <div class="turn-indicator" id="turnIndicator">Your Turn!</div>
+            </div>
+        </div>
+
+        <div class="game-actions">
+            <button class="btn btn-back" onclick="leaveGame()">LEAVE GAME</button>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="screen hidden">
+        <div class="container">
+            <div class="loading-spinner"></div>
+            <p id="loadingText">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Toast Messages -->
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
