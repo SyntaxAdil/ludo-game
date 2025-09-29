@@ -19,8 +19,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Server Connection
 function connectToServer() {
-    const serverUrl = 'https://ludo-n12co9hlr-adils-projects-ab51230d.vercel.app';
-    socket = io(serverUrl);
+    // Try multiple server URLs
+    const serverUrls = [
+        'https://ludo-n12co9hlr-adils-projects-ab51230d.vercel.app',
+        'https://socket-io-server.glitch.me',  // Backup server
+        'https://localhost:3001'  // Local server if running
+    ];
+
+    const serverUrl = serverUrls[0]; // Start with main server
+
+    socket = io(serverUrl, {
+        transports: ['websocket', 'polling'],
+        timeout: 10000,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+    });
 
     socket.on('connect', () => {
         console.log('Connected to server');
@@ -30,6 +44,12 @@ function connectToServer() {
     socket.on('disconnect', () => {
         console.log('Disconnected from server');
         updateConnectionStatus(false);
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        updateConnectionStatus(false);
+        showToast('Server connection failed. Using local mode.', 'error');
     });
 
     socket.on('roomCreated', (data) => {
@@ -136,8 +156,33 @@ function createRoom() {
         return;
     }
 
+    if (!socket || !socket.connected) {
+        showToast('Not connected to server. Using offline mode.', 'error');
+        // Create local room for testing
+        createLocalRoom(playerName);
+        return;
+    }
+
     showLoading('Creating room...');
     socket.emit('createRoom', { playerName: playerName });
+
+    // Timeout after 10 seconds
+    setTimeout(() => {
+        if (!gameState.roomId) {
+            showToast('Server timeout. Creating local room...', 'error');
+            createLocalRoom(playerName);
+        }
+    }, 10000);
+}
+
+function createLocalRoom(playerName) {
+    // Fallback to local room
+    gameState.roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    gameState.playerId = 'local-' + Date.now();
+    gameState.players = [{ id: gameState.playerId, name: playerName }];
+    showLobby();
+    updateLobby();
+    showToast('Created local room (offline mode)', 'info');
 }
 
 function joinRoom() {
@@ -149,8 +194,22 @@ function joinRoom() {
         return;
     }
 
+    if (!socket || !socket.connected) {
+        showToast('Not connected to server. Cannot join room.', 'error');
+        showHome();
+        return;
+    }
+
     showLoading('Joining room...');
     socket.emit('joinRoom', { roomId: roomCode, playerName: playerName });
+
+    // Timeout after 10 seconds
+    setTimeout(() => {
+        if (!gameState.roomId) {
+            showToast('Failed to join room. Try again.', 'error');
+            showJoinRoom();
+        }
+    }, 10000);
 }
 
 function leaveRoom() {
